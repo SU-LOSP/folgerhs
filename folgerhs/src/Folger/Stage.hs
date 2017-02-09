@@ -1,36 +1,23 @@
-module Characters () where
+module Folger.Stage ( corpus
+                    , beginning
+                    , states
+                    ) where
 
-import Data.Maybe
 import Data.List
 import Control.Monad
 
-import Text.XML.Light.Input (parseXML)
-import Text.XML.Light.Proc (findElements, onlyElems, elChildren)
-import Text.XML.Light.Types (QName (..), Element (..), Content, Attr (..) )
+import Text.XML.Light.Proc (onlyElems)
+import Text.XML.Light.Types (Content, Element)
 
+import Folger.Utils
 
-filename :: String
-filename = "FolgerDigitalTexts_XML_Complete/FolgerDigitalTexts_XML_Complete/Oth.xml"
-
-isTag :: String -> Element -> Bool
-isTag n = (==) n . qName . elName
-
-drillTagPath :: [String] -> [Element] -> [Element]
-drillTagPath [] = id
-drillTagPath (n:ns) = drillTagPath ns . concatMap elChildren . filter (isTag n)
-
-body :: [Content] -> [Element]
-body = drillTagPath ["TEI", "text", "body"] . onlyElems
-
-attr :: String -> Element -> Maybe String
-attr n = listToMaybe . map attrVal . filter ((==) n . qName . attrKey) . elAttribs
-
-descendants :: Element -> [Element]
-descendants e = e : concatMap descendants (elChildren e)
 
 type Line = String
 type Character = String
 type State = (Line, Character, [Character])
+
+corpus :: [Content] -> [Element]
+corpus = concatMap descendants . drillTagPath ["TEI", "text", "body"] . onlyElems
 
 beginning :: State
 beginning = ("0", "", [])
@@ -68,11 +55,3 @@ states [] st = [st]
 states (e:es) st = case state e st of
                      Just st' -> st : states es st'
                      Nothing -> states es st
-
-main :: IO ()
-main = do source <- readFile filename
-          let contents = parseXML source
-              corpus = concatMap descendants (body contents)
-              results = states corpus beginning
-          mapM_ print results
-          return ()
