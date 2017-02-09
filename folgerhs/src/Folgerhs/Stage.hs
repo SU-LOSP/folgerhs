@@ -1,7 +1,8 @@
-module Folgerhs.Stage ( corpus
-                    , beginning
-                    , states
-                    ) where
+module Folgerhs.Stage ( State
+                      , corpus
+                      , beginning
+                      , states
+                      ) where
 
 import Data.List
 import Control.Monad
