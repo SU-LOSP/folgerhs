@@ -1,4 +1,4 @@
-module Folger.Stage ( corpus
+module Folgerhs.Stage ( corpus
                     , beginning
                     , states
                     ) where
@@ -9,7 +9,7 @@ import Control.Monad
 import Text.XML.Light.Proc (onlyElems)
 import Text.XML.Light.Types (Content, Element)
 
-import Folger.Utils
+import Folgerhs.Utils
 
 
 type Line = String

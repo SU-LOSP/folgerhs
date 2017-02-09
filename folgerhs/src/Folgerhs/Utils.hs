@@ -1,4 +1,4 @@
-module Folger.Utils ( isTag
+module Folgerhs.Utils ( isTag
                     , drillTagPath
                     , attr
                     , descendants

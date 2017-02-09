@@ -5,7 +5,7 @@ import System.Environment
 
 import Text.XML.Light.Input (parseXML)
 
-import Folger.Stage
+import Folgerhs.Stage
 
 
 main :: IO ()
