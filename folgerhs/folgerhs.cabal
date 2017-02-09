@@ -1,14 +1,14 @@
 name:                folgerhs
 version:             0.1.0.0
--- synopsis:
--- description:
+synopsis:            Toolset for Folger Shakespeare Library's XML annotated plays
+description:         Toolset for Folger Shakespeare Library's XML annotated plays
 homepage:            https://github.com/SU-LOSP/tools#readme
-license:             GPLv3
+license:             GPL-3
 license-file:        LICENSE
 author:              Unai Zalakain
 maintainer:          unai@gisa-elkartea.org
 copyright:           2017 Unai Zalakain
--- category:
+category:            Text
 build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
