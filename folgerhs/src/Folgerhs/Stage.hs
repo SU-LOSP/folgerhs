@@ -1,4 +1,6 @@
 module Folgerhs.Stage ( State
+                      , Character
+                      , Line
                       , corpus
                       , beginning
                       , states
