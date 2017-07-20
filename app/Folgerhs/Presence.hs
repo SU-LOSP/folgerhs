@@ -1,7 +1,6 @@
-module Main (main) where
+module Folgerhs.Presence (presence) where
 
 import Control.Monad
-import System.Environment
 import Data.List
 import Data.Bool
 import Data.Maybe
@@ -36,14 +35,11 @@ displayHeader gcs = "Act.Scene.Line," ++ intercalate "," (map displayCharacter g
 characters :: [State] -> [Character]
 characters = nub . concatMap (\(_, _, cs) -> cs)
 
-main :: IO ()
-main = do args <- getArgs
-          if length args /= 1
-             then error "Expecting filename."
-             else do source <- readFile $ head args
-                     let contents = parseXML source
-                         results = states (corpus contents) beginning
-                         gcs = characters results
-                     putStrLn $ displayHeader gcs
-                     mapM_ (putStrLn . displayRow gcs) results
-                     return ()
+presence :: FilePath -> Float -> IO ()
+presence f relevance = do source <- readFile f
+                          let contents = parseXML source
+                              results = states (corpus contents) beginning
+                              gcs = characters results
+                          putStrLn $ displayHeader gcs
+                          mapM_ (putStrLn . displayRow gcs) results
+                          return ()
