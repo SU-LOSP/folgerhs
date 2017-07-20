@@ -1,60 +1,33 @@
-module Folgerhs.Stage ( State
-                      , Character
-                      , Line
-                      , corpus
-                      , beginning
-                      , states
-                      ) where
+module Folgerhs.Stage where
 
 import Data.List
 import Control.Monad
 
-import Text.XML.Light.Proc (onlyElems)
-import Text.XML.Light.Types (Content, Element)
-
-import Folgerhs.Utils
-
 
 type Line = String
 type Character = String
-type State = (Line, Character, [Character])
+type Stage = (Line, Character, [Character])
 
-corpus :: [Content] -> [Element]
-corpus = concatMap descendants . drillTagPath ["TEI", "text", "body"] . onlyElems
+line :: Stage -> Line
+line (l, _, _) = l
 
-beginning :: State
-beginning = ("0", "", [])
+speaker :: Stage -> String
+speaker (_, s, _) = s
 
-setLine :: Line -> State -> State
+present :: Stage -> [Character]
+present (_, _, cs) = cs
+
+setLine :: Line -> Stage -> Stage
 setLine n' (n, s, cs) = (n', s, cs)
 
-setSpeaker :: Character -> State -> State
+setSpeaker :: Character -> Stage -> Stage
 setSpeaker s' (n, s, cs) = (n, s', cs)
 
-stageEntrance :: String -> State -> State
-stageEntrance crepr' (n, s, cs) = let cs' = words crepr'
-                                   in (n, s, nub (cs' ++ cs))
+entrance :: Character -> Stage -> Stage
+entrance c (n, s, cs) = (n, s, nub (c:cs))
 
-stageExit :: String -> State -> State
-stageExit crepr' (n, s, cs) = let cs' = words crepr'
-                               in (n, s, cs \\ cs')
+exit :: Character -> Stage -> Stage
+exit c (n, s, cs) = (n, s, cs \\ [c])
 
-state :: Element -> State -> Maybe State
-state el st
-  | isTag "milestone" el = case (attr "unit" el, attr "n" el) of
-                             (Just "ftln", Just n) -> return $ setLine n st
-                             _ -> Nothing
-  | isTag "sp" el = case attr "who" el of
-                      Just s -> return $ setSpeaker s st
-                      _ -> Nothing
-  | isTag "stage" el = case (attr "type" el, attr "who" el) of
-                         (Just "entrance", Just cs) -> return $ stageEntrance cs st
-                         (Just "exit", Just cs) -> return $ stageExit cs st
-                         _ -> Nothing
-  | otherwise = Nothing
-
-states :: [Element] -> State -> [State]
-states [] st = [st]
-states (e:es) st = case state e st of
-                     Just st' -> st : states es st'
-                     Nothing -> states es st
+characters :: [Stage] -> [Character]
+characters = nub . concatMap (\(_, _, cs) -> cs)

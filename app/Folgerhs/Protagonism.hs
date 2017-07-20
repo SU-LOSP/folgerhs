@@ -4,13 +4,10 @@ import Control.Monad
 import Data.Function (on)
 import Data.List
 
-import Text.XML.Light.Input (parseXML)
 import Text.Printf (printf)
 
 import Folgerhs.Stage
-
-speaker :: State -> String
-speaker (_, s, _) = s
+import Folgerhs.Parse (parse)
 
 count :: Eq a => a -> [a] -> Int
 count e = length . filter (e ==)
@@ -24,7 +21,6 @@ reprProt (c, r) = printf "%.2f%% \t %s" (r*100) c
 
 protagonism :: FilePath -> IO ()
 protagonism f = do source <- readFile f
-                   let contents = parseXML source
-                       speakers = map speaker $ states (corpus contents) beginning
+                   let speakers = map speaker (parse source)
                    mapM_ (putStrLn . reprProt) (sortedProtagonism speakers)
                    return ()
