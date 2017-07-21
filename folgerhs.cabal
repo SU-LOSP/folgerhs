@@ -18,6 +18,9 @@ library
   exposed-modules:     Folgerhs.Parse, Folgerhs.Stage
   build-depends:       base >= 4.7 && < 5
                      , xml >= 1.3.14 && < 1.3.15
+                     , containers >= 0.5.10.2 && < 0.5.10.3
+                     , graphviz >= 2999.19.0.0 && < 2999.19.0.1
+                     , text >= 1.2.2.2 && < 1.2.2.3
   default-language:    Haskell2010
 
 executable folgerhs
@@ -27,6 +30,9 @@ executable folgerhs
   build-depends:       base
                      , folgerhs
                      , xml >= 1.3.14 && < 1.3.15
+                     , containers >= 0.5.10.2 && < 0.5.10.3
+                     , graphviz >= 2999.19.0.0 && < 2999.19.0.1
+                     , text >= 1.2.2.2 && < 1.2.2.3
                      , optparse-applicative >= 0.13
   default-language:    Haskell2010
 

@@ -5,13 +5,16 @@ import Data.Monoid ((<>))
 
 import Folgerhs.Protagonism (protagonism)
 import Folgerhs.Presence (presence)
+import Folgerhs.Groups (groupGraph)
 
-data Config = Presence FilePath Float | Protagonism FilePath
+data Config = Presence FilePath Float | Protagonism FilePath | GroupGraph FilePath
 
 config :: Parser Config
 config = hsubparser
        ( command "presence"
          ( info presenceConfig (progDesc "Line-by-line presence on stage") )
+      <> command "groupgraph"
+         ( info groupGraphConfig (progDesc "TODO") )
       <> command "protagonism"
          ( info protagonismConfig (progDesc "Speaker ratio per character") )
        )
@@ -33,9 +36,16 @@ protagonismConfig = Protagonism
             ( metavar "FILENAME"
            <> help "File to parse" )
 
+groupGraphConfig :: Parser Config
+groupGraphConfig = GroupGraph
+       <$> strArgument
+            ( metavar "FILENAME"
+           <> help "File to parse" )
+
 execute :: Config -> IO ()
 execute (Presence f r) = presence f r
 execute (Protagonism f) = protagonism f
+execute (GroupGraph f) = groupGraph f
 
 main :: IO ()
 main = execParser opts >>= execute

@@ -1,12 +1,13 @@
 module Folgerhs.Stage where
 
-import Data.List
+import Data.List ((\\), nub)
 import Control.Monad
 
 
 type Line = String
 type Character = String
-type Stage = (Line, Character, [Character])
+type Group = [Character]
+type Stage = (Line, Character, Group)
 
 line :: Stage -> Line
 line (l, _, _) = l
@@ -14,8 +15,8 @@ line (l, _, _) = l
 speaker :: Stage -> String
 speaker (_, s, _) = s
 
-present :: Stage -> [Character]
-present (_, _, cs) = cs
+present :: Stage -> Group
+present (_, _, g) = g
 
 setLine :: Line -> Stage -> Stage
 setLine n' (n, s, cs) = (n', s, cs)
@@ -31,3 +32,12 @@ exit c (n, s, cs) = (n, s, cs \\ [c])
 
 characters :: [Stage] -> [Character]
 characters = nub . concatMap (\(_, _, cs) -> cs)
+
+lines :: [Stage] -> [Line]
+lines = map (\(l, _, _) -> l)
+
+group :: [Group] -> [Character] -> [Group]
+group gs cs = cs : [ g \\ cs | g <- gs]
+
+groups :: [[Character]] -> [[Group]]
+groups = scanl group []
