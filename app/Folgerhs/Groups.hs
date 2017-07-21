@@ -1,8 +1,8 @@
 module Folgerhs.Groups (groupGraph) where
 
-import Data.List ((\\))
+import Data.List ((\\), intercalate)
 import Data.Sequence (fromList)
-import Data.Text.Lazy (unpack)
+import Data.Text.Lazy (unpack, pack)
 
 import Data.GraphViz.Types.Generalised
 import Data.GraphViz.Types (printDotGraph)
@@ -23,7 +23,7 @@ edges ss c = [ DotEdge (nodeName fl c) (nodeName tl c) []
 
 cluster :: Line -> [Character] -> DotSubGraph String
 cluster l cs = DotSG { isCluster = True
-                     , subGraphID = Nothing
+                     , subGraphID = Just $ Str $ pack $ intercalate "_" (l : cs)
                      , subGraphStmts = fromList 
                         [ DN $ DotNode (nodeName l c) [] | c <- cs ]
                      }
@@ -42,9 +42,11 @@ graph ss = DotGraph { strictGraph = True
                     , graphStatements = fromList $
                             global_attrs
                          ++ (map SG (clusters ss))
-                         ++ (map DE $ concatMap (edges ss) (take 3 $ characters ss))
+                         ++ (map DE $ concatMap (edges ss) (characters ss))
                     }
-    where global_attrs = [ GA $ GraphAttrs [ RankDir FromTop
+    where global_attrs = [ GA $ GraphAttrs [ Pack DoPack
+                                           , PackMode PackClust
+                                           , RankDir FromTop
                                            ]
                          , GA $ NodeAttrs [ toLabel ""
                                           , style invis
@@ -54,12 +56,23 @@ graph ss = DotGraph { strictGraph = True
                                           , NodeSep 0.02
                                           ]
                          , GA $ EdgeAttrs [ edgeEnds NoDir
-                                          , penWidth 10
+                                          , penWidth 5
                                           ]
                          ]
 
+example :: [Stage]
+example = [ ("1.1.1", "", ["A", "B", "C"])
+          , ("1.1.2", "", ["A", "B", "C"])
+          , ("1.1.3", "", ["A", "B"])
+          , ("1.1.4", "", ["A", "B"])
+          , ("1.1.5", "", ["A", "B", "D"])
+          , ("1.1.6", "", ["A", "B", "E"])
+          , ("1.1.7", "", ["C", "B"])
+          , ("1.1.8", "", ["C", "D"])
+          ]
+
 groupGraph :: FilePath -> IO ()
 groupGraph f = do source <- readFile f
-                  let g = graph (take 1000 $ parse source)
+                  let g = graph example
                   putStrLn $ unpack $ printDotGraph g
                   return ()

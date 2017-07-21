@@ -40,4 +40,4 @@ group :: [Group] -> [Character] -> [Group]
 group gs cs = cs : [ g \\ cs | g <- gs]
 
 groups :: [[Character]] -> [[Group]]
-groups = scanl group []
+groups = tail . scanl group []
