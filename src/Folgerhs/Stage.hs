@@ -1,6 +1,6 @@
 module Folgerhs.Stage where
 
-import Data.List ((\\), nub)
+import Data.List
 import Control.Monad
 
 
@@ -43,8 +43,9 @@ perLine (s:s':ss)
 lines :: [Stage] -> [Line]
 lines = map (\(l, _, _) -> l)
 
-group :: [Group] -> [Character] -> [Group]
-group gs cs = cs : [ g \\ cs | g <- gs]
-
-groups :: [[Character]] -> [[Group]]
-groups = tail . scanl group []
+journey :: Character -> [Stage] -> [(Line, Group)]
+journey c = nub
+          . concatMap (\ss -> [head ss, last ss])
+          . groupBy (\(_,cs) (_,cs') -> cs == cs')
+          . filter (\(_,cs) -> elem c cs)
+          . map (\(l,_,cs) -> (l,cs))

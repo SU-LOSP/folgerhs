@@ -24,56 +24,53 @@ clusterName :: Line -> [Character] -> GraphID
 clusterName l cs = let name = intercalate "_" (l : map displayCharacter cs)
                     in Str (pack name)
 
-edges :: [Stage] -> Character -> [DotEdge String]
-edges ss c = [ DotEdge (nodeName fl c) (nodeName tl c) []
-             | (fl, tl) <- zip (Folgerhs.Stage.lines ss) (tail $ Folgerhs.Stage.lines ss)
-             , fl /= tl
+edges :: Character -> [Line] -> [DotEdge String]
+edges c ls = [ DotEdge (nodeName fl c) (nodeName tl c) []
+             | (fl, tl) <- zip ls (tail ls), fl /= tl
              ]
 
-cluster :: Line -> [Character] -> DotSubGraph String
+cluster :: Line -> Group -> DotSubGraph String
 cluster l cs = DotSG { isCluster = True
                      , subGraphID = Just $ clusterName l cs
                      , subGraphStmts = fromList 
                         [ DN $ DotNode (nodeName l c) [] | c <- cs ]
                      }
 
-clusters :: [Stage] -> [Character] -> [DotSubGraph String]
-clusters ss cs = let (ls, _, css) = unzip3 ss
-                     gss = groups css
-                  in [ cluster l (g `intersect` cs)
-                     | (l, gs) <- zip ls gss
-                     , g <- gs
-                     , not $ null g ]
+characterStatements :: Character -> [Stage] -> [DotStatement String]
+characterStatements c ss = let j = journey c ss
+                               (ls, _) = unzip j
+                            in (map DE $ edges c ls) ++ map (SG . uncurry cluster) j
 
-graph :: [Stage] -> [Character] -> DotGraph String
-graph ss cs = DotGraph { strictGraph = True
-                      , directedGraph = True
-                      , graphID = Nothing
-                      , graphStatements = fromList $
-                              global_attrs
-                           ++ (map SG (clusters ss cs))
-                           ++ (map DE $ concatMap (edges ss) (cs))
-                      }
-    where global_attrs = [ GA $ GraphAttrs [ Pack DoPack
-                                           , PackMode PackClust
-                                           , RankDir FromTop
-                                           ]
-                         , GA $ NodeAttrs [ toLabel ""
-                                          , style invis
-                                          , shape PointShape
-                                          , Width 0
-                                          , Height 0
-                                          , NodeSep 0.02
-                                          ]
-                         , GA $ EdgeAttrs [ edgeEnds NoDir
-                                          , penWidth 5
-                                          ]
-                         ]
+
+globalAttrs :: [DotStatement String]
+globalAttrs = [ GA $ GraphAttrs [ Pack DoPack
+                                 , PackMode PackClust
+                                 , RankDir FromTop
+                                 ]
+               , GA $ NodeAttrs [ toLabel ""
+                                , shape PointShape
+                                , Width 0.02
+                                , Height 0.02
+                                , NodeSep 0.02
+                                ]
+               , GA $ EdgeAttrs [ edgeEnds NoDir
+                                , penWidth 5
+                                ]
+               ]
+
+graph :: [Character] -> [Stage] -> DotGraph String
+graph cs ss = DotGraph { strictGraph = True
+                       , directedGraph = True
+                       , graphID = Nothing
+                       , graphStatements = fromList $
+                               globalAttrs
+                            ++ concatMap (\c -> characterStatements c ss) cs
+                       }
 
 
 groupGraph :: FilePath -> IO ()
 groupGraph f = do source <- readFile f
                   let ss = perLine $ parse source
-                  let cs = filter isSingle $ characters ss
-                  putStrLn $ unpack $ printDotGraph $ graph ss cs
+                  let cs = characters ss
+                  putStrLn $ unpack $ printDotGraph $ graph cs ss
                   return ()
