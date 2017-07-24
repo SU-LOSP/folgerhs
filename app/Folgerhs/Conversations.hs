@@ -17,8 +17,8 @@ type Palette = Character -> Color
 type Speak = Bool
 
 colors :: [Color]
-colors = [ red, green, blue, yellow, cyan, magenta, rose, violet, azure,
-           aquamarine, chartreuse, orange ]
+colors = cycle [ red, green, blue, yellow, cyan, magenta, rose, violet, azure,
+                 aquamarine, chartreuse, orange ]
 
 selectColor :: [Character] -> Palette
 selectColor chs ch = fromMaybe (greyN 0.5) $ lookup ch (zip chs colors)
@@ -38,7 +38,7 @@ optSplitUp a i = let i' = fromIntegral i
                   in (max a (a*i' / (2*pi)), 2*pi / i')
 
 charPics :: [Character] -> Character -> Palette -> Picture
-charPics chs s cf = let (d, a) = optSplitUp 250 (length chs)
+charPics chs s cf = let (d, a) = optSplitUp 200 (length chs)
                      in pictures $
                          [ transArc d (i*a) $ charPic ch (cf ch) (ch == s)
                          | (i, ch) <- zip [0..] chs ]
@@ -61,9 +61,10 @@ stageAnim lps ssArray t = let frame = floor (t * lps)
                                  then stagePic (ssArray ! frame) palette
                                  else blank
 
-conversations :: FilePath -> Float -> IO ()
-conversations f lps = do source <- readFile f
-                         let ss = selectCharacters hasName $ perLine $ parse source
-                         let ssArray = listArray (1, length ss) ss
-                         animate (FullScreen (1280, 800)) (greyN 0.05) (stageAnim lps ssArray)
-                         return ()
+conversations :: FilePath -> Float -> Bool -> IO ()
+conversations f lps wu = do source <- readFile f
+                            let scf = if wu then (\_ -> True) else hasName
+                            let ss = selectCharacters scf $ perLine $ parse source
+                            let ssArray = listArray (1, length ss) ss
+                            animate (FullScreen (1280, 800)) (greyN 0.05) (stageAnim lps ssArray)
+                            return ()

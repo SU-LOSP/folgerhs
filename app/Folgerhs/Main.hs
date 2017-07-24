@@ -9,14 +9,14 @@ import Folgerhs.Conversations (conversations)
 
 data Config = Presence FilePath Float
             | Protagonism FilePath
-            | Conversations FilePath Float
+            | Conversations FilePath Float Bool
 
 config :: Parser Config
 config = hsubparser
        ( command "presence"
-         ( info presenceConfig (progDesc "Line-by-line presence on stage") )
+         ( info presenceConfig (progDesc "Line-by-line presence on stage as CSV") )
       <> command "conversations"
-         ( info conversationsConfig (progDesc "TODO") )
+         ( info conversationsConfig (progDesc "Animated stage") )
       <> command "protagonism"
          ( info protagonismConfig (progDesc "Speaker ratio per character") )
        )
@@ -48,11 +48,14 @@ conversationsConfig = Conversations
             <> value 1
             <> metavar "RATE"
             <> help "Lines per second")
+       <*> switch
+            ( long "with-unnamed"
+            <> help "Include unnamed characters too")
 
 execute :: Config -> IO ()
 execute (Presence f r) = presence f r
 execute (Protagonism f) = protagonism f
-execute (Conversations f lps) = conversations f lps
+execute (Conversations f lps wu) = conversations f lps wu
 
 main :: IO ()
 main = execParser opts >>= execute
