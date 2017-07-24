@@ -1,5 +1,7 @@
 module Folgerhs.Conversations (conversations) where
 
+import System.Exit
+
 import Data.Array
 import Data.List (lookup)
 import Data.Char (isLower)
@@ -7,14 +9,16 @@ import Data.Maybe (fromMaybe)
 
 import Graphics.Gloss
 import Graphics.Gloss.Data.Vector
+import Graphics.Gloss.Interface.IO.Game
 
 import Folgerhs.Stage as S
 import Folgerhs.Parse (parse)
 import Folgerhs.Display (displayCharacter)
 
 
-type Palette = Character -> Color
 type Speak = Bool
+type Palette = (Character -> Color)
+    
 
 colors :: [Color]
 colors = cycle [ red, green, blue, yellow, magenta, rose, violet, azure,
@@ -48,27 +52,43 @@ stagePic (l, s, chs) cf = pictures $
     [ charPics chs s cf
     , translate (-60) (-10) $ scale 0.3 0.3 $ color white $ text $ l ]
 
+data Play = Playing Palette (Array Int Stage) Int Int
+          | Paused Palette (Array Int Stage) Int Int
+          | Exit
+
+newPlay :: [Stage] -> Play
+newPlay ss = Paused (selectColor $ characters ss) (listArray (1, length ss) ss) 1 0
+
+playPic :: Play -> IO Picture
+playPic (Playing p ss i j) = return $ stagePic (ss ! i) p
+playPic (Paused p ss i j) = return $ stagePic (ss ! i) p
+playPic Exit = return blank
+
+playEvent :: Event -> Play -> IO Play
+playEvent (EventKey (SpecialKey KeyEsc) Down _ _) _ = return $ Exit
+playEvent (EventKey (SpecialKey KeySpace) Down _ _) (Playing p ss i j) = return $ Paused p ss i j
+playEvent (EventKey (SpecialKey KeySpace) Down _ _) (Paused p ss i j) = return $ Playing p ss i j
+playEvent _ p = return p
+
+playStep :: Float -> Play -> IO Play
+playStep t (Playing p ss i j)
+  | j > 0 = return $ Playing p ss i (j-1)
+  | otherwise = return $ Playing p ss (i+1) j
+playStep _ (Paused p ss i j) = return $ Paused p ss i j
+playStep _ Exit = exitSuccess
+
 hasName :: Character -> Bool
 hasName = any isLower . takeWhile (/= '.') . displayCharacter
 
 selectCharacters :: (Character -> Bool) -> [Stage] -> [Stage]
 selectCharacters f = map (\(l, s, cs) -> (l, s, filter f cs))
 
-stageAnim :: Float -> Array Int Stage -> Float -> Picture
-stageAnim lps ssArray t = let frame = floor (t * lps)
-                              palette = selectColor (characters $ elems ssArray)
-                           in if inRange (bounds ssArray) frame
-                                 then stagePic (ssArray ! frame) palette
-                                 else blank
-
 seek :: Line -> [Stage] -> [Stage]
 seek "" = id
 seek l = dropWhile (\(l',_,_) -> l /= l')
 
-conversations :: FilePath -> Float -> Bool -> Line -> IO ()
+conversations :: FilePath -> Int -> Bool -> Line -> IO ()
 conversations f lps wu sl = do source <- readFile f
                                let scf = if wu then (\_ -> True) else hasName
-                               let ss = selectCharacters scf $ perLine $ seek sl $ parse source
-                               let ssArray = listArray (1, length ss) ss
-                               animate (FullScreen (1280, 800)) (greyN 0.05) (stageAnim lps ssArray)
-                               return ()
+                               let p = newPlay $ selectCharacters scf $ perLine $ seek sl $ parse source
+                               playIO (FullScreen (1280, 800)) (greyN 0.05) lps p playPic playEvent playStep

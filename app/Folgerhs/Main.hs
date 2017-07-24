@@ -10,7 +10,7 @@ import Folgerhs.Conversations (conversations)
 
 data Config = Presence FilePath Float
             | Protagonism FilePath
-            | Conversations FilePath Float Bool Line
+            | Conversations FilePath Int Bool Line
 
 config :: Parser Config
 config = hsubparser
