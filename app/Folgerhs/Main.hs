@@ -3,13 +3,14 @@ module Main (main) where
 import Options.Applicative
 import Data.Monoid ((<>))
 
+import Folgerhs.Stage
 import Folgerhs.Protagonism (protagonism)
 import Folgerhs.Presence (presence)
 import Folgerhs.Conversations (conversations)
 
 data Config = Presence FilePath Float
             | Protagonism FilePath
-            | Conversations FilePath Float Bool
+            | Conversations FilePath Float Bool Line
 
 config :: Parser Config
 config = hsubparser
@@ -51,11 +52,16 @@ conversationsConfig = Conversations
        <*> switch
             ( long "with-unnamed"
             <> help "Include unnamed characters too")
+       <*> strOption
+            ( long "seek-line"
+            <> value ""
+            <> metavar "ACT.SCENE.LINE"
+            <> help "Start animation from given line")
 
 execute :: Config -> IO ()
 execute (Presence f r) = presence f r
 execute (Protagonism f) = protagonism f
-execute (Conversations f lps wu) = conversations f lps wu
+execute (Conversations f lps wu sl) = conversations f lps wu sl
 
 main :: IO ()
 main = execParser opts >>= execute

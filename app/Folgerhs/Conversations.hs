@@ -61,10 +61,14 @@ stageAnim lps ssArray t = let frame = floor (t * lps)
                                  then stagePic (ssArray ! frame) palette
                                  else blank
 
-conversations :: FilePath -> Float -> Bool -> IO ()
-conversations f lps wu = do source <- readFile f
-                            let scf = if wu then (\_ -> True) else hasName
-                            let ss = selectCharacters scf $ perLine $ parse source
-                            let ssArray = listArray (1, length ss) ss
-                            animate (FullScreen (1280, 800)) (greyN 0.05) (stageAnim lps ssArray)
-                            return ()
+seek :: Line -> [Stage] -> [Stage]
+seek "" = id
+seek l = dropWhile (\(l',_,_) -> l /= l')
+
+conversations :: FilePath -> Float -> Bool -> Line -> IO ()
+conversations f lps wu sl = do source <- readFile f
+                               let scf = if wu then (\_ -> True) else hasName
+                               let ss = selectCharacters scf $ perLine $ seek sl $ parse source
+                               let ssArray = listArray (1, length ss) ss
+                               animate (FullScreen (1280, 800)) (greyN 0.05) (stageAnim lps ssArray)
+                               return ()
