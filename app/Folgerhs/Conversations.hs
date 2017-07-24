@@ -1,7 +1,6 @@
 module Folgerhs.Conversations (conversations) where
 
-import Data.List (lookup, intercalate, intersect)
-import Data.Sequence (fromList)
+import Data.List (lookup)
 import Data.Char (isLower)
 import Data.Maybe (fromMaybe)
 
@@ -30,18 +29,20 @@ transArc :: Float -> Float -> Picture -> Picture
 transArc d a p = let (x, y) = mulSV d $ unitVectorAtAngle a
                   in translate x y p
 
--- TODO Optimal radius
+optSplitUp :: Float -> Int -> (Float, Float)
+optSplitUp a i = let i' = fromIntegral i
+                  in (max a (a*i' / (2*pi)), 2*pi / i')
 
 charPics :: [Character] -> Palette -> Picture
-charPics chs cf = let a = 2*pi / (fromIntegral $ length chs)
+charPics chs cf = let (d, a) = optSplitUp 250 (length chs)
                    in pictures $
-                       [ transArc 300 (i*a) $ charPic ch (cf ch)
+                       [ transArc d (i*a) $ charPic ch (cf ch)
                        | (i, ch) <- zip [0..] chs ]
 
 stagePic :: Stage -> Palette -> Picture
 stagePic (l, s, chs) cf = pictures $
     [ charPics chs cf
-    , translate (-70) 0 $ scale 0.3 0.3 $ color white $ text $ l ]
+    , translate (-60) (-10) $ scale 0.3 0.3 $ color white $ text $ l ]
 
 hasName :: Character -> Bool
 hasName = any isLower . takeWhile (/= '.') . displayCharacter
