@@ -14,6 +14,7 @@ import Folgerhs.Display (displayCharacter)
 
 
 type Palette = Character -> Color
+type Speak = Bool
 
 colors :: [Color]
 colors = [ red, green, blue, yellow, cyan, magenta, rose, violet, azure,
@@ -22,9 +23,11 @@ colors = [ red, green, blue, yellow, cyan, magenta, rose, violet, azure,
 selectColor :: [Character] -> Palette
 selectColor chs ch = fromMaybe (greyN 0.5) $ lookup ch (zip chs colors)
 
-charPic :: Character -> Color -> Picture
-charPic ch c = pictures [ color c $ rectangleSolid 120 50
-                        , translate (-50) 0 $ scale 0.1 0.1 $ text $ displayCharacter ch ]
+charPic :: Character -> Color -> Speak -> Picture
+charPic ch c s = let speaker = color (greyN 0.85) $ rectangleSolid 130 60
+                     box = color c $ rectangleSolid 120 50
+                     name = translate (-50) 0 $ scale 0.1 0.1 $ text $ displayCharacter ch
+                  in pictures $ if s then [speaker, box, name] else [box, name]
 
 transArc :: Float -> Float -> Picture -> Picture
 transArc d a p = let (x, y) = mulSV d $ unitVectorAtAngle a
@@ -34,15 +37,15 @@ optSplitUp :: Float -> Int -> (Float, Float)
 optSplitUp a i = let i' = fromIntegral i
                   in (max a (a*i' / (2*pi)), 2*pi / i')
 
-charPics :: [Character] -> Palette -> Picture
-charPics chs cf = let (d, a) = optSplitUp 250 (length chs)
-                   in pictures $
-                       [ transArc d (i*a) $ charPic ch (cf ch)
-                       | (i, ch) <- zip [0..] chs ]
+charPics :: [Character] -> Character -> Palette -> Picture
+charPics chs s cf = let (d, a) = optSplitUp 250 (length chs)
+                     in pictures $
+                         [ transArc d (i*a) $ charPic ch (cf ch) (ch == s)
+                         | (i, ch) <- zip [0..] chs ]
 
 stagePic :: Stage -> Palette -> Picture
 stagePic (l, s, chs) cf = pictures $
-    [ charPics chs cf
+    [ charPics chs s cf
     , translate (-60) (-10) $ scale 0.3 0.3 $ color white $ text $ l ]
 
 hasName :: Character -> Bool
