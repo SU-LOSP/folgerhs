@@ -19,6 +19,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , xml
                      , containers
+                     , array
                      , gloss
   default-language:    Haskell2010
 
@@ -30,6 +31,7 @@ executable folgerhs
                      , folgerhs
                      , xml
                      , containers
+                     , array
                      , gloss
                      , optparse-applicative
   default-language:    Haskell2010

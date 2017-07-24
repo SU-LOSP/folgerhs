@@ -1,5 +1,6 @@
 module Folgerhs.Conversations (conversations) where
 
+import Data.Array
 import Data.List (lookup)
 import Data.Char (isLower)
 import Data.Maybe (fromMaybe)
@@ -50,11 +51,16 @@ hasName = any isLower . takeWhile (/= '.') . displayCharacter
 selectCharacters :: (Character -> Bool) -> [Stage] -> [Stage]
 selectCharacters f = map (\(l, s, cs) -> (l, s, filter f cs))
 
-stageAnim :: [Stage] -> Float -> Picture
-stageAnim ss t = stagePic (ss !! (floor $ t*4)) (selectColor $ characters ss)
+stageAnim :: Float -> Array Int Stage -> Float -> Picture
+stageAnim lps ssArray t = let frame = floor (t * lps)
+                              palette = selectColor (characters $ elems ssArray)
+                           in if inRange (bounds ssArray) frame
+                                 then stagePic (ssArray ! frame) palette
+                                 else blank
 
-conversations :: FilePath -> IO ()
-conversations f = do source <- readFile f
-                     let ss = selectCharacters hasName $ perLine $ parse source
-                     animate (FullScreen (1280, 800)) (greyN 0.05) (stageAnim ss)
-                     return ()
+conversations :: FilePath -> Float -> IO ()
+conversations f lps = do source <- readFile f
+                         let ss = selectCharacters hasName $ perLine $ parse source
+                         let ssArray = listArray (1, length ss) ss
+                         animate (FullScreen (1280, 800)) (greyN 0.05) (stageAnim lps ssArray)
+                         return ()

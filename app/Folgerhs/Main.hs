@@ -7,7 +7,9 @@ import Folgerhs.Protagonism (protagonism)
 import Folgerhs.Presence (presence)
 import Folgerhs.Conversations (conversations)
 
-data Config = Presence FilePath Float | Protagonism FilePath | Conversations FilePath
+data Config = Presence FilePath Float
+            | Protagonism FilePath
+            | Conversations FilePath Float
 
 config :: Parser Config
 config = hsubparser
@@ -41,11 +43,16 @@ conversationsConfig = Conversations
        <$> strArgument
             ( metavar "FILENAME"
            <> help "File to parse" )
+       <*> option auto
+            ( long "rate"
+            <> value 1
+            <> metavar "RATE"
+            <> help "Lines per second")
 
 execute :: Config -> IO ()
 execute (Presence f r) = presence f r
 execute (Protagonism f) = protagonism f
-execute (Conversations f) = conversations f
+execute (Conversations f lps) = conversations f lps
 
 main :: IO ()
 main = execParser opts >>= execute
