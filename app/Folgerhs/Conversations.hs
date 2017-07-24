@@ -13,39 +13,41 @@ import Folgerhs.Parse (parse)
 import Folgerhs.Display (displayCharacter)
 
 
-hasName :: Character -> Bool
-hasName = any isLower . takeWhile (/= '.') . displayCharacter
-
-selectCharacters :: (Character -> Bool) -> [Stage] -> [Stage]
-selectCharacters f = map (\(l, s, cs) -> (l, s, filter f cs))
-
-charPic :: Character -> Color -> Picture
-charPic ch c = pictures [ color c $ rectangleSolid 120 50
-                        , translate (-50) 0 $ scale 0.1 0.1 $ text $ displayCharacter ch ]
-
-transCircum :: Float -> Float -> Picture -> Picture
-transCircum d a p = let (x, y) = mulSV d $ unitVectorAtAngle a
-                     in translate x y p
-
--- TODO Optimal radius
-
-charPics :: [Character] -> (Character -> Color) -> Picture
-charPics chs cf = let a = 2*pi / (fromIntegral $ length chs)
-                   in pictures $
-                       [ transCircum 300 (i*a) $ charPic ch (cf ch)
-                       | (i, ch) <- zip [0..] chs ]
-
-stagePic :: Stage -> (Character -> Color) -> Picture
-stagePic (l, s, chs) cf = pictures $
-    [ charPics chs cf
-    , translate (-70) 0 $ scale 0.3 0.3 $ color white $ text $ l ]
+type Palette = Character -> Color
 
 colors :: [Color]
 colors = [ red, green, blue, yellow, cyan, magenta, rose, violet, azure,
            aquamarine, chartreuse, orange ]
 
-selectColor :: [Character] -> Character -> Color
+selectColor :: [Character] -> Palette
 selectColor chs ch = fromMaybe (greyN 0.5) $ lookup ch (zip chs colors)
+
+charPic :: Character -> Color -> Picture
+charPic ch c = pictures [ color c $ rectangleSolid 120 50
+                        , translate (-50) 0 $ scale 0.1 0.1 $ text $ displayCharacter ch ]
+
+transArc :: Float -> Float -> Picture -> Picture
+transArc d a p = let (x, y) = mulSV d $ unitVectorAtAngle a
+                  in translate x y p
+
+-- TODO Optimal radius
+
+charPics :: [Character] -> Palette -> Picture
+charPics chs cf = let a = 2*pi / (fromIntegral $ length chs)
+                   in pictures $
+                       [ transArc 300 (i*a) $ charPic ch (cf ch)
+                       | (i, ch) <- zip [0..] chs ]
+
+stagePic :: Stage -> Palette -> Picture
+stagePic (l, s, chs) cf = pictures $
+    [ charPics chs cf
+    , translate (-70) 0 $ scale 0.3 0.3 $ color white $ text $ l ]
+
+hasName :: Character -> Bool
+hasName = any isLower . takeWhile (/= '.') . displayCharacter
+
+selectCharacters :: (Character -> Bool) -> [Stage] -> [Stage]
+selectCharacters f = map (\(l, s, cs) -> (l, s, filter f cs))
 
 stageAnim :: [Stage] -> Float -> Picture
 stageAnim ss t = stagePic (ss !! (floor $ t*4)) (selectColor $ characters ss)
