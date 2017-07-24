@@ -17,16 +17,16 @@ type Palette = Character -> Color
 type Speak = Bool
 
 colors :: [Color]
-colors = cycle [ red, green, blue, yellow, cyan, magenta, rose, violet, azure,
+colors = cycle [ red, green, blue, yellow, magenta, rose, violet, azure,
                  aquamarine, chartreuse, orange ]
 
 selectColor :: [Character] -> Palette
 selectColor chs ch = fromMaybe (greyN 0.5) $ lookup ch (zip chs colors)
 
 charPic :: Character -> Color -> Speak -> Picture
-charPic ch c s = let speaker = color (greyN 0.85) $ rectangleSolid 130 60
-                     box = color c $ rectangleSolid 120 50
-                     name = translate (-50) 0 $ scale 0.1 0.1 $ text $ displayCharacter ch
+charPic ch c s = let speaker = color (greyN 0.85) $ rectangleSolid 150 50
+                     box = color c $ rectangleSolid 140 40
+                     name = translate (-60) (-4) $ scale 0.1 0.1 $ text $ displayCharacter ch
                   in pictures $ if s then [speaker, box, name] else [box, name]
 
 transArc :: Float -> Float -> Picture -> Picture
