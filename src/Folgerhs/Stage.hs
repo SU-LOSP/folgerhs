@@ -9,25 +9,34 @@ data StageEvent = Milestone Line
                 | Entrance [Character]
                 | Exit [Character]
                 | Speech Character
+                deriving (Eq, Show)
 
 onStage :: [Character] -> StageEvent -> [Character]
 onStage chs (Entrance chs') = nub (chs ++ chs')
 onStage chs (Exit chs') = chs \\ chs'
 onStage chs _ = chs
 
-speaker :: StageEvent -> Maybe Character
-speaker (Speech ch) = Just ch
-speaker _ = Nothing
+speaker :: Character -> StageEvent -> Character
+speaker _ (Speech ch') = ch'
+speaker ch _ = ch
 
-line :: StageEvent -> Maybe Line
-line (Milestone l) = Just l
-line _ = Nothing
+maybeSpeaker :: StageEvent -> Maybe Character
+maybeSpeaker (Speech ch) = Just ch
+maybeSpeaker _ = Nothing
+
+line :: Line -> StageEvent -> Line
+line _ (Milestone l') = l'
+line l _ = l
+
+maybeLine :: StageEvent -> Maybe Line
+maybeLine (Milestone l) = Just l
+maybeLine _ = Nothing
 
 lines :: [StageEvent] -> [Line]
-lines = mapMaybe line
+lines = mapMaybe maybeLine
 
 isLine :: Line -> StageEvent -> Bool
-isLine l = maybe False ((==) l) . line
+isLine l = maybe False ((==) l) . maybeLine
 
 seek :: Line -> [StageEvent] -> [StageEvent]
 seek "" = id
@@ -37,7 +46,7 @@ lineStage :: Line -> [StageEvent] -> [Character]
 lineStage l = foldl onStage [] . takeWhile (not . isLine l)
 
 lineSpeaker :: Line -> [StageEvent] -> Character
-lineSpeaker l = head . mapMaybe speaker . seek l
+lineSpeaker l = foldl speaker "" . takeWhile (not . isLine l)
 
 characters :: [StageEvent] -> [Character]
 characters [] = []

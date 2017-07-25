@@ -20,6 +20,6 @@ reprProt (c, r) = printf "%.2f%% \t %s" (r*100) c
 
 protagonism :: FilePath -> IO ()
 protagonism f = do source <- readFile f
-                   let sps = mapMaybe speaker (parse source)
+                   let sps = mapMaybe maybeSpeaker (parse source)
                    mapM_ (putStrLn . reprProt) (sortedPercent sps)
                    return ()

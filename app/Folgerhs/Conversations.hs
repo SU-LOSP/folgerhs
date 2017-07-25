@@ -17,6 +17,7 @@ import Folgerhs.Parse (parse)
 
 type Palette = (Character -> Color)
 data State = Paused | Resumed
+    deriving (Eq, Show)
 type Play =  (State, (Array Int StageEvent), Int, Palette)
 
 colors :: [Color]
@@ -48,21 +49,18 @@ enter p = pictures [p, color (withAlpha 0.5 black) (rectangleSolid boxW boxH)]
 exit :: Picture -> Picture
 exit = enter
 
-charPic :: Character -> Color -> StageEvent -> Picture
-charPic ch c se = let box = color c $ rectangleSolid boxW boxH
-                      name = translate (-60) (-4) $ scale 0.1 0.1 $ text ch
-                      pic = pictures [box, name]
-                   in case se of
-                        Entrance chs -> if elem ch chs
-                                           then enter pic
-                                           else pic
-                        Exit chs -> if elem ch chs
-                                       then exit pic
-                                       else pic
-                        Speech ch' -> if ch == ch'
-                                         then speak pic
-                                         else pic
-                        _ -> pic
+charPic :: Character -> Bool -> Color -> StageEvent -> Picture
+charPic ch sp c se = let box = color c $ rectangleSolid boxW boxH
+                         name = translate (-60) (-4) $ scale 0.1 0.1 $ text ch
+                         pic = pictures [box, name]
+                      in case se of
+                           Entrance chs -> if elem ch chs
+                                              then enter pic
+                                              else pic
+                           Exit chs -> if elem ch chs
+                                          then exit pic
+                                          else pic
+                           _ -> if sp then speak pic else pic
 
 transArc :: Float -> Float -> Picture -> Picture
 transArc d a p = let (x, y) = mulSV d $ unitVectorAtAngle a
@@ -72,23 +70,24 @@ optSplitUp :: Float -> Int -> (Float, Float)
 optSplitUp a i = let i' = fromIntegral i
                   in (max a (a*i' / (2*pi)), 2*pi / i')
 
-clock :: Line -> Picture
-clock = translate (-60) (-10) . scale 0.3 0.3 . color white . text
-
-charPics :: [Character] -> (Character -> Color) -> StageEvent -> Picture
-charPics chs cf se = let pics = map (\ch -> charPic ch (cf ch) se) chs
-                         (d, a) = optSplitUp 200 (length chs)
-                      in pictures [ transArc d (i*a) pic
-                                  | (i, pic) <- zip [0..] pics ]
-
 curLine :: Play -> Line
 curLine (_, ses, i, _) = let past = [ ses ! i' | i' <- [fst (bounds ses) .. i] ]
-                          in fromMaybe "0" $ listToMaybe $ reverse $ mapMaybe S.line past
+                          in fromMaybe "0" $ listToMaybe $ reverse $ mapMaybe maybeLine past
+
+clock :: Play -> Picture
+clock = translate (-60) (-10) . scale 0.3 0.3 . color white . text . curLine
+
+charPics :: Play -> Picture
+charPics p@(_,ses,i,cf) = let se = ses ! i
+                              chs = lineStage (curLine p) (elems ses)
+                              sp = lineSpeaker (curLine p) (elems ses)
+                              pics = map (\ch -> charPic ch (ch == sp) (cf ch) se) chs
+                              (d, a) = optSplitUp 200 (length chs)
+                          in pictures [ transArc d (i*a) pic
+                                      | (i, pic) <- zip [0..] pics ]
 
 playPic :: Play -> IO Picture
-playPic p@(_, ses, i, cf) = let l = curLine p
-                                chs = lineStage l (elems ses)
-                             in return $ pictures [ charPics chs cf (ses ! i), clock l ]
+playPic p = return $ pictures [ charPics p, clock p ]
 
 playEvent :: Event -> Play -> IO Play
 playEvent (EventKey (SpecialKey KeyEsc) Down _ _) _ = exitSuccess

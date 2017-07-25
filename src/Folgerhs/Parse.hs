@@ -40,7 +40,7 @@ parseElement el
                              (Just "ftln", Just n) -> Just $ Milestone n 
                              _ -> Nothing
   | isTag "sp" el = case attr "who" el of
-                      Just s -> Just $ Speech s
+                      Just s -> Just $ Speech (charName s)
                       _ -> Nothing
   | isTag "stage" el = case (attr "type" el, attr "who" el) of
                          (Just "entrance", Just cs) -> Just $ Entrance (map charName $ words cs)
