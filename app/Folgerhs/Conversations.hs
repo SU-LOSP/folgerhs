@@ -8,7 +8,7 @@ import Data.List ((\\), union, lookup)
 import Data.Char (isLower)
 import Data.Maybe (fromMaybe)
 
-import Graphics.Gloss
+import Graphics.Gloss as G
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Interface.IO.Game
 
@@ -19,6 +19,9 @@ type Palette = (Character -> Color)
 data State = Paused | Resumed
     deriving (Eq, Show)
 type Play =  (State, (Array Int StageEvent), Int, Palette)
+
+takeA :: (Ix i, Eq e) => Int -> (Array i e) -> [e]
+takeA i a = take i $ elems a
 
 colors :: [Color]
 colors = cycle [ red, green, blue, yellow, magenta, rose, violet, azure,
@@ -34,6 +37,12 @@ newPlay ses = ( Paused
               , (selectColor $ characters ses) 
               )
 
+arrow :: Picture
+arrow = color white $ pictures [ G.line [(0, 0), (0, 10)]
+                               , G.line [(0, 10), (2, 7)]
+                               , G.line [(0, 10), ((-2), 7)]
+                               ]
+
 boxW :: Float
 boxW = 140
 
@@ -44,31 +53,24 @@ speak :: Picture -> Picture
 speak p = pictures [color (greyN 0.85) (rectangleSolid (boxW+10) (boxH+10)), p]
 
 enter :: Picture -> Picture
-enter p = pictures [p, color (withAlpha 0.5 black) (rectangleSolid boxW boxH)]
+enter p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), (rotate 180 arrow)]
 
 exit :: Picture -> Picture
-exit = enter
+exit p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), arrow]
 
-charPic :: Character -> Bool -> Color -> StageEvent -> Picture
-charPic ch sp c se = let box = color c $ rectangleSolid boxW boxH
-                         name = translate (-60) (-4) $ scale 0.1 0.1 $ text ch
-                         pic = pictures [box, name]
-                      in case se of
-                           Entrance chs -> if elem ch chs
-                                              then enter pic
-                                              else pic
-                           Exit chs -> if elem ch chs
-                                          then exit pic
-                                          else pic
-                           _ -> if sp then speak pic else pic
+charPic :: Character -> Bool -> Color -> Picture
+charPic ch sp c = let box = color c $ rectangleSolid boxW boxH
+                      name = translate (-60) (-4) $ scale 0.1 0.1 $ text ch
+                      pic = pictures [box, name]
+                   in if sp then speak pic else pic
 
 transArc :: Float -> Float -> Picture -> Picture
 transArc d a p = let (x, y) = mulSV d $ unitVectorAtAngle a
                   in translate x y p
 
-optSplitUp :: Float -> Int -> (Float, Float)
-optSplitUp a i = let i' = fromIntegral i
-                  in (max a (a*i' / (2*pi)), 2*pi / i')
+optPos :: Float -> Int -> (Float, Float)
+optPos a i = let i' = fromIntegral i
+             in (max a (a*i' / (2*pi)), 2*pi / i')
 
 curLine :: Play -> Line
 curLine (_, ses, i, _) = let past = [ ses ! i' | i' <- [fst (bounds ses) .. i] ]
@@ -77,17 +79,20 @@ curLine (_, ses, i, _) = let past = [ ses ! i' | i' <- [fst (bounds ses) .. i] ]
 clock :: Play -> Picture
 clock = translate (-60) (-10) . scale 0.3 0.3 . color white . text . curLine
 
-charPics :: Play -> Picture
-charPics p@(_,ses,i,cf) = let se = ses ! i
-                              chs = lineStage (curLine p) (elems ses)
-                              sp = lineSpeaker (curLine p) (elems ses)
-                              pics = map (\ch -> charPic ch (ch == sp) (cf ch) se) chs
-                              (d, a) = optSplitUp 200 (length chs)
-                          in pictures [ transArc d (i*a) pic
-                                      | (i, pic) <- zip [0..] pics ]
+charPics :: Play -> [Picture]
+charPics p@(_,ses,i,cf) = let sp = accumSpeaker (takeA i ses)
+                              chs = accumStage (takeA i ses)
+                              charPic' ch = charPic ch (ch == sp) (cf ch)
+                           in case ses ! i of
+                                (Entrance chs') -> map charPic' (chs \\ chs') ++ map (enter . charPic') chs'
+                                (Exit chs') -> map charPic' (chs \\ chs') ++ map (exit . charPic') chs'
+                                _ -> map charPic' chs
 
 playPic :: Play -> IO Picture
-playPic p = return $ pictures [ charPics p, clock p ]
+playPic p = let pics = charPics p
+                (d, a) = optPos 200 (length pics)
+                posPics = [ transArc d (i*a) pic | (i, pic) <- zip [0..] pics ]
+             in return $ pictures $ clock p : posPics
 
 playEvent :: Event -> Play -> IO Play
 playEvent (EventKey (SpecialKey KeyEsc) Down _ _) _ = exitSuccess
@@ -99,21 +104,21 @@ playStep :: Float -> Play -> IO Play
 playStep _ (Resumed, ses, i, cf) = return (Resumed, ses, (i+1), cf)
 playStep _ p = return p
 
-replicateChanges :: [StageEvent] -> [StageEvent]
-replicateChanges [] = []
-replicateChanges (se:ses) = let r = replicateChanges ses
-                             in case se of
-                                  Entrance _ -> replicate 5 se ++ r
-                                  Exit _ -> replicate 5 se ++ r
-                                  _ -> se : r
-
 hasName :: Character -> Bool
 hasName = any isLower . takeWhile (/= '.')
+
+replicateChanges :: Int -> [StageEvent] -> [StageEvent]
+replicateChanges i [] = []
+replicateChanges i (se:ses) = let r = replicateChanges i ses
+                               in case se of
+                                    Entrance _ -> replicate i se ++ r
+                                    Exit _ -> replicate i se ++ r
+                                    _ -> se : r
 
 conversations :: FilePath -> Int -> Bool -> Line -> IO ()
 conversations f lps wu sl = let dis = FullScreen (1280, 800)
                                 bg = greyN 0.05
                                 scf = if wu then const True else hasName
-                                np = newPlay . replicateChanges . selectCharacters scf . seek sl . parse
+                                np = newPlay . replicateChanges 10 . selectCharacters scf . seek sl . parse
                              in do source <- readFile f
                                    playIO dis bg lps (np source) playPic playEvent playStep

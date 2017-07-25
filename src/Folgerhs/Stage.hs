@@ -42,11 +42,17 @@ seek :: Line -> [StageEvent] -> [StageEvent]
 seek "" = id
 seek l = dropWhile (not . isLine l)
 
+accumStage :: [StageEvent] -> [Character]
+accumStage = foldl onStage []
+
 lineStage :: Line -> [StageEvent] -> [Character]
-lineStage l = foldl onStage [] . takeWhile (not . isLine l)
+lineStage l = accumStage . takeWhile (not . isLine l)
+
+accumSpeaker :: [StageEvent] -> Character
+accumSpeaker = foldl speaker ""
 
 lineSpeaker :: Line -> [StageEvent] -> Character
-lineSpeaker l = foldl speaker "" . takeWhile (not . isLine l)
+lineSpeaker l = accumSpeaker . takeWhile (not . isLine l)
 
 characters :: [StageEvent] -> [Character]
 characters [] = []
