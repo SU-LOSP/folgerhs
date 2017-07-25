@@ -38,10 +38,6 @@ lines = mapMaybe maybeLine
 isLine :: Line -> StageEvent -> Bool
 isLine l = maybe False ((==) l) . maybeLine
 
-seek :: Line -> [StageEvent] -> [StageEvent]
-seek "" = id
-seek l = dropWhile (not . isLine l)
-
 accumStage :: [StageEvent] -> [Character]
 accumStage = foldl onStage []
 

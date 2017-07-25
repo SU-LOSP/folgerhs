@@ -54,7 +54,7 @@ conversationsConfig = Conversations
             <> help "Include unnamed characters too")
        <*> strOption
             ( long "seek-line"
-            <> value ""
+            <> value "0"
             <> metavar "ACT.SCENE.LINE"
             <> help "Start animation from given line")
 

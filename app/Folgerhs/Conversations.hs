@@ -2,9 +2,10 @@ module Folgerhs.Conversations (conversations) where
 
 import System.Exit
 
+import Data.Function (on)
 import Data.Maybe
 import Data.Array
-import Data.List ((\\), union, lookup)
+import Data.List
 import Data.Char (isLower)
 import Data.Maybe (fromMaybe)
 
@@ -30,12 +31,12 @@ colors = cycle [ red, green, blue, yellow, magenta, rose, violet, azure,
 selectColor :: [Character] -> Palette
 selectColor chs ch = fromMaybe (greyN 0.5) $ lookup ch (zip chs colors)
 
-newPlay :: [StageEvent] -> Play
-newPlay ses = ( Paused
-              , (listArray (1, length ses) ses)
-              , 1
-              , (selectColor $ characters ses) 
-              )
+newPlay :: Line -> [StageEvent] -> Play
+newPlay l ses = ( Paused
+                , (listArray (1, length ses) ses)
+                , (fromMaybe 1 (elemIndex (Milestone l) ses))
+                , (selectColor $ characters ses) 
+                )
 
 boxW :: Float
 boxW = 140
@@ -61,10 +62,10 @@ above :: Picture -> Picture
 above = translate 0 (boxH*3/4)
 
 enter :: Picture -> Picture
-enter p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), above (rotate 180 arrow)]
+enter p = pictures [p, color (withAlpha 0.6 black) (rectangleSolid boxW boxH), above (rotate 180 arrow)]
 
 exit :: Picture -> Picture
-exit p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), above arrow]
+exit p = pictures [p, color (withAlpha 0.6 black) (rectangleSolid boxW boxH), above arrow]
 
 charPic :: Character -> Bool -> Color -> Picture
 charPic ch sp c = let box = color c $ rectangleSolid boxW boxH
@@ -76,13 +77,9 @@ transArc :: Float -> Float -> Picture -> Picture
 transArc d a p = let (x, y) = mulSV d $ unitVectorAtAngle a
                   in translate x y p
 
-optPos :: Float -> Int -> (Float, Float)
-optPos a i = let i' = fromIntegral i
-             in (max a (a*i' / (2*pi)), 2*pi / i')
-
-curLine :: Play -> Line
-curLine (_, ses, i, _) = let past = [ ses ! i' | i' <- [i, i-1 .. fst (bounds ses)] ]
-                          in fromMaybe "0" $ listToMaybe $ mapMaybe maybeLine past
+optPos :: Float -> Float -> Int -> (Float, Float)
+optPos a s i = let i' = fromIntegral i
+                in (max a (s*i' / (2*pi)), 2*pi / i')
 
 charPics :: Play -> [Picture]
 charPics p@(_,ses,i,cf) = let sp = accumSpeaker (takeA i ses)
@@ -93,14 +90,24 @@ charPics p@(_,ses,i,cf) = let sp = accumSpeaker (takeA i ses)
                                 (Exit chs') -> map charPic' (chs \\ chs') ++ map (exit . charPic') chs'
                                 _ -> map charPic' chs
 
+curLine :: Play -> Line
+curLine (_, ses, i, _) = let past = [ ses ! i' | i' <- [i, i-1 .. fst (bounds ses)] ]
+                          in fromMaybe "0" $ listToMaybe $ mapMaybe maybeLine past
+
+lineRatio :: Play -> Float
+lineRatio p@(_, ses, _, _) = let ls = S.lines (elems ses)
+                                 i = fromMaybe 0 $ elemIndex (curLine p) ls
+                              in on (/) fromIntegral i (length ls)
+
 clock :: Play -> Picture
 clock p = let d = translate (-60) (-10) $ scale 0.3 0.3 $ color white $ text $ curLine p
-           in d
+              a = color white $ rotate (-90) $ scale 1 (-1) $ thickArc 0 (lineRatio p * 360) 75 5
+           in pictures [d, a]
 
 
 playPic :: Play -> IO Picture
 playPic p = let pics = charPics p
-                (d, a) = optPos 200 (length pics)
+                (d, a) = optPos 200 175 (length pics)
                 posPics = [ transArc d (i*a) pic | (i, pic) <- zip [0..] pics ]
              in return $ pictures $ clock p : posPics
 
@@ -134,6 +141,6 @@ conversations :: FilePath -> Int -> Bool -> Line -> IO ()
 conversations f lps wu sl = let dis = FullScreen (1280, 800)
                                 bg = greyN 0.05
                                 scf = if wu then const True else hasName
-                                np = newPlay . replicateChanges 10 . selectCharacters scf . seek sl . parse
+                                np = newPlay sl . replicateChanges 10 . selectCharacters scf . parse
                              in do source <- readFile f
                                    playIO dis bg lps (np source) playPic playEvent playStep
