@@ -2,22 +2,30 @@ module Folgerhs.Presence (presence) where
 
 import Control.Monad
 import Data.List
+import Data.Bool
 
-import Folgerhs.Stage
+import Folgerhs.Stage as S
 import Folgerhs.Parse (parse)
-import Folgerhs.Display
 
+type Row = (Line, [String])
 
-displayRow :: [Character] -> Stage -> String
-displayRow gcs (l, s, cs) = l ++ "," ++ intercalate "," (map (displayPresence s cs) gcs)
+rows :: [Character] -> [StageEvent] -> [Row]
+rows chs ses = [ (l, [ presence l ch | ch <- chs ]) | l <- S.lines ses ]
+    where presence l ch = if lineSpeaker l ses == ch 
+                             then "Speaker"
+                             else bool "Absent" "Present" $
+                                 (elem ch $ lineStage l ses)
+
+displayRow :: Row -> String
+displayRow (l, ss) = l ++ "," ++ intercalate "," ss
 
 displayHeader :: [Character] -> String
-displayHeader gcs = "Act.Scene.Line," ++ intercalate "," (map displayCharacter gcs)
+displayHeader chs = "Act.Scene.Line," ++ intercalate "," chs
 
 presence :: FilePath -> Float -> IO ()
 presence f relevance = do source <- readFile f
-                          let stages = parse source
-                              gcs = characters stages
-                          putStrLn $ displayHeader gcs
-                          mapM_ (putStrLn . displayRow gcs) stages
+                          let ses = parse source
+                              chs = characters ses
+                          putStrLn $ displayHeader chs
+                          mapM_ (putStrLn . displayRow) (rows chs ses)
                           return ()

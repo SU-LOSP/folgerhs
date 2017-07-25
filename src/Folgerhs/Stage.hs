@@ -1,43 +1,55 @@
 module Folgerhs.Stage where
 
+import Data.Maybe
 import Data.List
-import Control.Monad
 
 type Line = String
 type Character = String
-type Group = [Character]
-type Stage = (Line, Character, Group)
+data StageEvent = Milestone Line
+                | Entrance [Character]
+                | Exit [Character]
+                | Speech Character
 
-line :: Stage -> Line
-line (l, _, _) = l
+onStage :: [Character] -> StageEvent -> [Character]
+onStage chs (Entrance chs') = nub (chs ++ chs')
+onStage chs (Exit chs') = chs \\ chs'
+onStage chs _ = chs
 
-speaker :: Stage -> String
-speaker (_, s, _) = s
+speaker :: StageEvent -> Maybe Character
+speaker (Speech ch) = Just ch
+speaker _ = Nothing
 
-present :: Stage -> Group
-present (_, _, g) = g
+line :: StageEvent -> Maybe Line
+line (Milestone l) = Just l
+line _ = Nothing
 
-setLine :: Line -> Stage -> Stage
-setLine n' (n, s, cs) = (n', s, cs)
+lines :: [StageEvent] -> [Line]
+lines = mapMaybe line
 
-setSpeaker :: Character -> Stage -> Stage
-setSpeaker s' (n, s, cs) = (n, s', cs)
+isLine :: Line -> StageEvent -> Bool
+isLine l = maybe False ((==) l) . line
 
-entrance :: Character -> Stage -> Stage
-entrance c (n, s, cs) = (n, s, nub (c:cs))
+seek :: Line -> [StageEvent] -> [StageEvent]
+seek "" = id
+seek l = dropWhile (not . isLine l)
 
-exit :: Character -> Stage -> Stage
-exit c (n, s, cs) = (n, s, cs \\ [c])
+lineStage :: Line -> [StageEvent] -> [Character]
+lineStage l = foldl onStage [] . takeWhile (not . isLine l)
 
-characters :: [Stage] -> [Character]
-characters = nub . concatMap (\(_, _, cs) -> cs)
+lineSpeaker :: Line -> [StageEvent] -> Character
+lineSpeaker l = head . mapMaybe speaker . seek l
 
-perLine :: [Stage] -> [Stage]
-perLine [] = []
-perLine (s:[]) = [s]
-perLine (s:s':ss)
-  | line s == line s' = perLine (s':ss)
-  | otherwise = s : perLine (s':ss)
+characters :: [StageEvent] -> [Character]
+characters [] = []
+characters (se:ses) = case se of
+                        Entrance chs -> nub $ chs ++ characters ses
+                        _ -> characters ses
 
-lines :: [Stage] -> [Line]
-lines = map (\(l, _, _) -> l)
+selectCharacters :: (Character -> Bool) -> [StageEvent] -> [StageEvent]
+selectCharacters _ [] = []
+selectCharacters f (se:ses) = let r = selectCharacters f ses
+                               in case se of
+                                Entrance chs -> Entrance (filter f chs) : r
+                                Exit chs -> Exit (filter f chs) : r
+                                Speech ch -> if f ch then se : r else r
+                                se -> se : r

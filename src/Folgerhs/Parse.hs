@@ -1,10 +1,10 @@
 module Folgerhs.Parse ( parseCorpus
                       , corpus
-                      , beginning
                       , parse
                       ) where
 
 import Data.Maybe
+import Data.List
 import Text.XML.Light.Input (parseXML)
 import Text.XML.Light.Proc (onlyElems, elChildren)
 import Text.XML.Light.Types (QName (..), Element (..), Content, Attr (..) )
@@ -27,29 +27,33 @@ descendants e = e : concatMap descendants (elChildren e)
 corpus :: [Content] -> [Element]
 corpus = concatMap descendants . drillTagPath ["TEI", "text", "body"] . onlyElems
 
-beginning :: Stage
-beginning = ("0", "", [])
+charName :: String -> Character
+charName c = let n = fromMaybe c (stripPrefix "#" c)
+              in case span (/= '_') $ reverse n of
+                   ("", p) -> p
+                   (s, "") -> s
+                   (s, p) -> reverse $ tail p
 
-parseElement :: Element -> Stage -> Maybe Stage
-parseElement el st
+parseElement :: Element -> Maybe StageEvent
+parseElement el
   | isTag "milestone" el = case (attr "unit" el, attr "n" el) of
-                             (Just "ftln", Just n) -> return $ setLine n st
+                             (Just "ftln", Just n) -> Just $ Milestone n 
                              _ -> Nothing
   | isTag "sp" el = case attr "who" el of
-                      Just s -> return $ setSpeaker s st
+                      Just s -> Just $ Speech s
                       _ -> Nothing
   | isTag "stage" el = case (attr "type" el, attr "who" el) of
-                         (Just "entrance", Just cs) -> return $ foldr entrance st (words cs)
-                         (Just "exit", Just cs) -> return $ foldr exit st (words cs)
+                         (Just "entrance", Just cs) -> Just $ Entrance (map charName $ words cs)
+                         (Just "exit", Just cs) -> Just $ Exit (map charName $ words cs)
                          _ -> Nothing
   | otherwise = Nothing
 
-parseCorpus :: [Element] -> Stage -> [Stage]
-parseCorpus [] st = [st]
-parseCorpus (e:es) st = case parseElement e st of
-                          Just st' -> st : parseCorpus es st'
-                          Nothing -> parseCorpus es st
+parseCorpus :: [Element] -> [StageEvent]
+parseCorpus [] = []
+parseCorpus (e:es) = case parseElement e of
+                        Just se -> se : parseCorpus es
+                        Nothing -> parseCorpus es
 
-parse :: String -> [Stage]
+parse :: String -> [StageEvent]
 parse input = let content = parseXML input
-               in parseCorpus (corpus content) beginning
+               in parseCorpus (corpus content)

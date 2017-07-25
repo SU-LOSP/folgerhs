@@ -2,8 +2,9 @@ module Folgerhs.Conversations (conversations) where
 
 import System.Exit
 
+import Data.Maybe
 import Data.Array
-import Data.List (lookup)
+import Data.List ((\\), union, lookup)
 import Data.Char (isLower)
 import Data.Maybe (fromMaybe)
 
@@ -13,12 +14,10 @@ import Graphics.Gloss.Interface.IO.Game
 
 import Folgerhs.Stage as S
 import Folgerhs.Parse (parse)
-import Folgerhs.Display (displayCharacter)
 
-
-type Speak = Bool
 type Palette = (Character -> Color)
-    
+data State = Paused | Resumed
+type Play =  (State, (Array Int StageEvent), Int, Palette)
 
 colors :: [Color]
 colors = cycle [ red, green, blue, yellow, magenta, rose, violet, azure,
@@ -27,11 +26,43 @@ colors = cycle [ red, green, blue, yellow, magenta, rose, violet, azure,
 selectColor :: [Character] -> Palette
 selectColor chs ch = fromMaybe (greyN 0.5) $ lookup ch (zip chs colors)
 
-charPic :: Character -> Color -> Speak -> Picture
-charPic ch c s = let speaker = color (greyN 0.85) $ rectangleSolid 150 50
-                     box = color c $ rectangleSolid 140 40
-                     name = translate (-60) (-4) $ scale 0.1 0.1 $ text $ displayCharacter ch
-                  in pictures $ if s then [speaker, box, name] else [box, name]
+newPlay :: [StageEvent] -> Play
+newPlay ses = ( Paused
+              , (listArray (1, length ses) ses)
+              , 1
+              , (selectColor $ characters ses) 
+              )
+
+boxW :: Float
+boxW = 140
+
+boxH :: Float
+boxH = 40
+
+speak :: Picture -> Picture
+speak p = pictures [color (greyN 0.85) (rectangleSolid (boxW+10) (boxH+10)), p]
+
+enter :: Picture -> Picture
+enter p = pictures [p, color (withAlpha 0.5 black) (rectangleSolid boxW boxH)]
+
+exit :: Picture -> Picture
+exit = enter
+
+charPic :: Character -> Color -> StageEvent -> Picture
+charPic ch c se = let box = color c $ rectangleSolid boxW boxH
+                      name = translate (-60) (-4) $ scale 0.1 0.1 $ text ch
+                      pic = pictures [box, name]
+                   in case se of
+                        Entrance chs -> if elem ch chs
+                                           then enter pic
+                                           else pic
+                        Exit chs -> if elem ch chs
+                                       then exit pic
+                                       else pic
+                        Speech ch' -> if ch == ch'
+                                         then speak pic
+                                         else pic
+                        _ -> pic
 
 transArc :: Float -> Float -> Picture -> Picture
 transArc d a p = let (x, y) = mulSV d $ unitVectorAtAngle a
@@ -41,54 +72,49 @@ optSplitUp :: Float -> Int -> (Float, Float)
 optSplitUp a i = let i' = fromIntegral i
                   in (max a (a*i' / (2*pi)), 2*pi / i')
 
-charPics :: [Character] -> Character -> Palette -> Picture
-charPics chs s cf = let (d, a) = optSplitUp 200 (length chs)
-                     in pictures $
-                         [ transArc d (i*a) $ charPic ch (cf ch) (ch == s)
-                         | (i, ch) <- zip [0..] chs ]
+clock :: Line -> Picture
+clock = translate (-60) (-10) . scale 0.3 0.3 . color white . text
 
-stagePic :: Stage -> Palette -> Picture
-stagePic (l, s, chs) cf = pictures $
-    [ charPics chs s cf
-    , translate (-60) (-10) $ scale 0.3 0.3 $ color white $ text $ l ]
+charPics :: [Character] -> (Character -> Color) -> StageEvent -> Picture
+charPics chs cf se = let pics = map (\ch -> charPic ch (cf ch) se) chs
+                         (d, a) = optSplitUp 200 (length chs)
+                      in pictures [ transArc d (i*a) pic
+                                  | (i, pic) <- zip [0..] pics ]
 
-data Play = Playing Palette (Array Int Stage) Int Int
-          | Paused Palette (Array Int Stage) Int Int
-          | Exit
-
-newPlay :: [Stage] -> Play
-newPlay ss = Paused (selectColor $ characters ss) (listArray (1, length ss) ss) 1 0
+curLine :: Play -> Line
+curLine (_, ses, i, _) = let past = [ ses ! i' | i' <- [fst (bounds ses) .. i] ]
+                          in fromMaybe "0" $ listToMaybe $ reverse $ mapMaybe S.line past
 
 playPic :: Play -> IO Picture
-playPic (Playing p ss i j) = return $ stagePic (ss ! i) p
-playPic (Paused p ss i j) = return $ stagePic (ss ! i) p
-playPic Exit = return blank
+playPic p@(_, ses, i, cf) = let l = curLine p
+                                chs = lineStage l (elems ses)
+                             in return $ pictures [ charPics chs cf (ses ! i), clock l ]
 
 playEvent :: Event -> Play -> IO Play
-playEvent (EventKey (SpecialKey KeyEsc) Down _ _) _ = return $ Exit
-playEvent (EventKey (SpecialKey KeySpace) Down _ _) (Playing p ss i j) = return $ Paused p ss i j
-playEvent (EventKey (SpecialKey KeySpace) Down _ _) (Paused p ss i j) = return $ Playing p ss i j
+playEvent (EventKey (SpecialKey KeyEsc) Down _ _) _ = exitSuccess
+playEvent (EventKey (SpecialKey KeySpace) Down _ _) (Paused, ses, i, cf) = return (Resumed, ses, i, cf)
+playEvent (EventKey (SpecialKey KeySpace) Down _ _) (Resumed, ses, i, cf) = return (Paused, ses, i, cf)
 playEvent _ p = return p
 
 playStep :: Float -> Play -> IO Play
-playStep t (Playing p ss i j)
-  | j > 0 = return $ Playing p ss i (j-1)
-  | otherwise = return $ Playing p ss (i+1) j
-playStep _ (Paused p ss i j) = return $ Paused p ss i j
-playStep _ Exit = exitSuccess
+playStep _ (Resumed, ses, i, cf) = return (Resumed, ses, (i+1), cf)
+playStep _ p = return p
+
+replicateChanges :: [StageEvent] -> [StageEvent]
+replicateChanges [] = []
+replicateChanges (se:ses) = let r = replicateChanges ses
+                             in case se of
+                                  Entrance _ -> replicate 5 se ++ r
+                                  Exit _ -> replicate 5 se ++ r
+                                  _ -> se : r
 
 hasName :: Character -> Bool
-hasName = any isLower . takeWhile (/= '.') . displayCharacter
-
-selectCharacters :: (Character -> Bool) -> [Stage] -> [Stage]
-selectCharacters f = map (\(l, s, cs) -> (l, s, filter f cs))
-
-seek :: Line -> [Stage] -> [Stage]
-seek "" = id
-seek l = dropWhile (\(l',_,_) -> l /= l')
+hasName = any isLower . takeWhile (/= '.')
 
 conversations :: FilePath -> Int -> Bool -> Line -> IO ()
-conversations f lps wu sl = do source <- readFile f
-                               let scf = if wu then (\_ -> True) else hasName
-                               let p = newPlay $ selectCharacters scf $ perLine $ seek sl $ parse source
-                               playIO (FullScreen (1280, 800)) (greyN 0.05) lps p playPic playEvent playStep
+conversations f lps wu sl = let dis = FullScreen (1280, 800)
+                                bg = greyN 0.05
+                                scf = if wu then const True else hasName
+                                np = newPlay . replicateChanges . selectCharacters scf . seek sl . parse
+                             in do source <- readFile f
+                                   playIO dis bg lps (np source) playPic playEvent playStep
