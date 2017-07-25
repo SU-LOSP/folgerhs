@@ -37,12 +37,6 @@ newPlay ses = ( Paused
               , (selectColor $ characters ses) 
               )
 
-arrow :: Picture
-arrow = color white $ pictures [ G.line [(0, 0), (0, 10)]
-                               , G.line [(0, 10), (2, 7)]
-                               , G.line [(0, 10), ((-2), 7)]
-                               ]
-
 boxW :: Float
 boxW = 140
 
@@ -52,11 +46,25 @@ boxH = 40
 speak :: Picture -> Picture
 speak p = pictures [color (greyN 0.85) (rectangleSolid (boxW+10) (boxH+10)), p]
 
+arrow :: Picture
+arrow = color white $ pictures [ G.line [t1, o]
+                               , G.line [o, t2]
+                               , G.line [o, t3]
+                               ]
+                                   where o = (0, 0)
+                                         t1 = mulSV (boxH/2) (0,1)
+                                         a = mulSV (boxH/4) (0,1)
+                                         t2 = rotateV (pi/4) a
+                                         t3 = rotateV (-(pi/4)) a
+
+above :: Picture -> Picture
+above = translate 0 (boxH/2)
+
 enter :: Picture -> Picture
-enter p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), (rotate 180 arrow)]
+enter p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), above arrow]
 
 exit :: Picture -> Picture
-exit p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), arrow]
+exit p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), above (rotate 180 arrow)]
 
 charPic :: Character -> Bool -> Color -> Picture
 charPic ch sp c = let box = color c $ rectangleSolid boxW boxH
