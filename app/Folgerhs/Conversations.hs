@@ -47,24 +47,24 @@ speak :: Picture -> Picture
 speak p = pictures [color (greyN 0.85) (rectangleSolid (boxW+10) (boxH+10)), p]
 
 arrow :: Picture
-arrow = color white $ pictures [ G.line [t1, o]
+arrow = color white $ pictures [ G.line [o, t1]
                                , G.line [o, t2]
                                , G.line [o, t3]
                                ]
-                                   where o = (0, 0)
-                                         t1 = mulSV (boxH/2) (0,1)
-                                         a = mulSV (boxH/4) (0,1)
+                                   where o = (0, boxH/4)
+                                         t1 = mulSV (boxH/(-4)) (0,1)
+                                         a = mulSV (boxH/6) (0,1)
                                          t2 = rotateV (pi/4) a
                                          t3 = rotateV (-(pi/4)) a
 
 above :: Picture -> Picture
-above = translate 0 (boxH/2)
+above = translate 0 (boxH*3/4)
 
 enter :: Picture -> Picture
-enter p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), above arrow]
+enter p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), above (rotate 180 arrow)]
 
 exit :: Picture -> Picture
-exit p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), above (rotate 180 arrow)]
+exit p = pictures [p, color (withAlpha 0.8 black) (rectangleSolid boxW boxH), above arrow]
 
 charPic :: Character -> Bool -> Color -> Picture
 charPic ch sp c = let box = color c $ rectangleSolid boxW boxH
