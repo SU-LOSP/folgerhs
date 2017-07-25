@@ -81,11 +81,8 @@ optPos a i = let i' = fromIntegral i
              in (max a (a*i' / (2*pi)), 2*pi / i')
 
 curLine :: Play -> Line
-curLine (_, ses, i, _) = let past = [ ses ! i' | i' <- [fst (bounds ses) .. i] ]
-                          in fromMaybe "0" $ listToMaybe $ reverse $ mapMaybe maybeLine past
-
-clock :: Play -> Picture
-clock = translate (-60) (-10) . scale 0.3 0.3 . color white . text . curLine
+curLine (_, ses, i, _) = let past = [ ses ! i' | i' <- [i, i-1 .. fst (bounds ses)] ]
+                          in fromMaybe "0" $ listToMaybe $ mapMaybe maybeLine past
 
 charPics :: Play -> [Picture]
 charPics p@(_,ses,i,cf) = let sp = accumSpeaker (takeA i ses)
@@ -95,6 +92,11 @@ charPics p@(_,ses,i,cf) = let sp = accumSpeaker (takeA i ses)
                                 (Entrance chs') -> map charPic' (chs \\ chs') ++ map (enter . charPic') chs'
                                 (Exit chs') -> map charPic' (chs \\ chs') ++ map (exit . charPic') chs'
                                 _ -> map charPic' chs
+
+clock :: Play -> Picture
+clock p = let d = translate (-60) (-10) $ scale 0.3 0.3 $ color white $ text $ curLine p
+           in d
+
 
 playPic :: Play -> IO Picture
 playPic p = let pics = charPics p
