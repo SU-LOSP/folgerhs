@@ -1,4 +1,4 @@
-module Folgerhs.Protagonism (protagonism) where
+module Folgerhs.Speakers (speakers) where
 
 import Data.Function (on)
 import Data.List
@@ -18,8 +18,8 @@ sortedPercent chs = let perCh = [ (head g, g % chs) | g <- group (sort chs) ]
 reprProt :: (Character, Float) -> String
 reprProt (c, r) = printf "%.2f%% \t %s" (r*100) c
 
-protagonism :: FilePath -> IO ()
-protagonism f = do source <- readFile f
-                   let sps = mapMaybe maybeSpeaker (parse source)
-                   mapM_ (putStrLn . reprProt) (sortedPercent sps)
-                   return ()
+speakers :: FilePath -> IO ()
+speakers f = do source <- readFile f
+                let sps = mapMaybe maybeSpeaker (parse source)
+                mapM_ (putStrLn . reprProt) (sortedPercent sps)
+                return ()

@@ -1,4 +1,4 @@
-module Folgerhs.Conversations (conversations) where
+module Folgerhs.Animate (animation) where
 
 import System.Exit
 
@@ -101,7 +101,7 @@ lineRatio p@(_, ses, _, _) = let ls = S.lines (elems ses)
 
 clock :: Play -> Picture
 clock p = let d = translate (-60) (-10) $ scale 0.3 0.3 $ color white $ text $ curLine p
-              a = color white $ rotate (-90) $ scale 1 (-1) $ thickArc 0 (lineRatio p * 360) 75 5
+              a = color (greyN 0.2) $ rotate (-90) $ scale 1 (-1) $ thickArc 0 (lineRatio p * 360) 75 5
            in pictures [d, a]
 
 
@@ -137,10 +137,10 @@ replicateChanges i (se:ses) = let r = replicateChanges i ses
                                     Exit _ -> replicate i se ++ r
                                     _ -> se : r
 
-conversations :: FilePath -> Int -> Bool -> Line -> IO ()
-conversations f lps wu sl = let dis = FullScreen (1280, 800)
-                                bg = greyN 0.05
-                                scf = if wu then const True else hasName
-                                np = newPlay sl . replicateChanges 10 . selectCharacters scf . parse
-                             in do source <- readFile f
-                                   playIO dis bg lps (np source) playPic playEvent playStep
+animation :: FilePath -> Int -> Bool -> Line -> IO ()
+animation f lps wu sl = let dis = FullScreen (1280, 800)
+                            bg = greyN 0.05
+                            scf = if wu then hasName else const True
+                            np = newPlay sl . replicateChanges 10 . selectCharacters scf . parse
+                         in do source <- readFile f
+                               playIO dis bg lps (np source) playPic playEvent playStep

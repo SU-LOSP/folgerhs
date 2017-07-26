@@ -4,22 +4,22 @@ import Options.Applicative
 import Data.Monoid ((<>))
 
 import Folgerhs.Stage
-import Folgerhs.Protagonism (protagonism)
+import Folgerhs.Speakers (speakers)
 import Folgerhs.Presence (presence)
-import Folgerhs.Conversations (conversations)
+import Folgerhs.Animate (animation)
 
 data Config = Presence FilePath Float
-            | Protagonism FilePath
-            | Conversations FilePath Int Bool Line
+            | Speakers FilePath
+            | Animate FilePath Int Bool Line
 
 config :: Parser Config
 config = hsubparser
        ( command "presence"
-         ( info presenceConfig (progDesc "Line-by-line presence on stage as CSV") )
-      <> command "conversations"
-         ( info conversationsConfig (progDesc "Animated stage") )
-      <> command "protagonism"
-         ( info protagonismConfig (progDesc "Speaker ratio per character") )
+         ( info presenceConfig (progDesc "Line-by-line on stage presence as CSV") )
+      <> command "animate"
+         ( info animateConfig (progDesc "Animated character interaction") )
+      <> command "speakers"
+         ( info speakersConfig (progDesc "Speech ratio per character") )
        )
 
 presenceConfig :: Parser Config
@@ -33,25 +33,25 @@ presenceConfig = Presence
            <> metavar "RATIO"
            <> help "Minimum appearance ratio" )
 
-protagonismConfig :: Parser Config
-protagonismConfig = Protagonism
+speakersConfig :: Parser Config
+speakersConfig = Speakers
        <$> strArgument
             ( metavar "FILENAME"
            <> help "File to parse" )
 
-conversationsConfig :: Parser Config
-conversationsConfig = Conversations
+animateConfig :: Parser Config
+animateConfig = Animate
        <$> strArgument
             ( metavar "FILENAME"
            <> help "File to parse" )
        <*> option auto
             ( long "rate"
-            <> value 1
+            <> value 10
             <> metavar "RATE"
             <> help "Lines per second")
        <*> switch
-            ( long "with-unnamed"
-            <> help "Include unnamed characters too")
+            ( long "without-unnamed"
+            <> help "Exclude unnamed characters")
        <*> strOption
             ( long "seek-line"
             <> value "0"
@@ -60,11 +60,11 @@ conversationsConfig = Conversations
 
 execute :: Config -> IO ()
 execute (Presence f r) = presence f r
-execute (Protagonism f) = protagonism f
-execute (Conversations f lps wu sl) = conversations f lps wu sl
+execute (Speakers f) = speakers f
+execute (Animate f lps wu sl) = animation f lps wu sl
 
 main :: IO ()
 main = execParser opts >>= execute
     where
-        desc = "Toolset for Folger Shakespeare Library's XML annotated plays"
+        desc = "Example usage of the toolset for Folger Shakespeare Library's TEI-encoded plays"
         opts = info (helper <*> config) ( progDesc desc <> fullDesc )
