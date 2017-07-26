@@ -1,5 +1,5 @@
 name:                folgerhs
-version:             0.2.1.0
+version:             0.3.0.0
 synopsis:            Toolset for Folger Shakespeare Library's XML annotated plays
 description:         Toolset for Folger Shakespeare Library's XML annotated plays
 homepage:            https://github.com/SU-LOSP/tools#readme
