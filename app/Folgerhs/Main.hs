@@ -8,7 +8,7 @@ import Folgerhs.Speakers (speakers)
 import Folgerhs.Presence (presence)
 import Folgerhs.Animate (animation)
 
-data Config = Presence FilePath Float
+data Config = Presence FilePath Bool
             | Speakers FilePath
             | Animate FilePath Int Bool Line
 
@@ -27,11 +27,9 @@ presenceConfig = Presence
        <$> strArgument
             ( metavar "FILENAME"
            <> help "File to parse" )
-       <*> option auto
-            ( long "relevance"
-           <> value 0
-           <> metavar "RATIO"
-           <> help "Minimum appearance ratio" )
+       <*> switch
+            ( long "without-unnamed"
+            <> help "Exclude unnamed characters")
 
 speakersConfig :: Parser Config
 speakersConfig = Speakers
@@ -59,7 +57,7 @@ animateConfig = Animate
             <> help "Start animation from given line")
 
 execute :: Config -> IO ()
-execute (Presence f r) = presence f r
+execute (Presence f wu) = presence f wu
 execute (Speakers f) = speakers f
 execute (Animate f lps wu sl) = animation f lps wu sl
 

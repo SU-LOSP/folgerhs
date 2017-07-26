@@ -22,10 +22,11 @@ displayRow (l, ss) = l ++ "," ++ intercalate "," ss
 displayHeader :: [Character] -> String
 displayHeader chs = "Act.Scene.Line," ++ intercalate "," chs
 
-presence :: FilePath -> Float -> IO ()
-presence f relevance = do source <- readFile f
-                          let ses = parse source
-                              chs = characters ses
-                          putStrLn $ displayHeader chs
-                          mapM_ (putStrLn . displayRow) (rows chs ses)
-                          return ()
+presence :: FilePath -> Bool -> IO ()
+presence f wu = do source <- readFile f
+                   let scf = if wu then hasName else const True
+                       ses = selectCharacters scf $ parse source
+                       chs = characters ses
+                   putStrLn $ displayHeader chs
+                   mapM_ (putStrLn . displayRow) (rows chs ses)
+                   return ()

@@ -2,6 +2,7 @@ module Folgerhs.Stage where
 
 import Data.Maybe
 import Data.List
+import Data.Char (isLower)
 
 type Line = String
 type Character = String
@@ -55,6 +56,9 @@ characters [] = []
 characters (se:ses) = case se of
                         Entrance chs -> nub $ chs ++ characters ses
                         _ -> characters ses
+
+hasName :: Character -> Bool
+hasName = any isLower . takeWhile (/= '.')
 
 selectCharacters :: (Character -> Bool) -> [StageEvent] -> [StageEvent]
 selectCharacters _ [] = []

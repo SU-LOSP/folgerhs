@@ -6,7 +6,6 @@ import Data.Function (on)
 import Data.Maybe
 import Data.Array
 import Data.List
-import Data.Char (isLower)
 import Data.Maybe (fromMaybe)
 
 import Graphics.Gloss as G
@@ -115,8 +114,8 @@ playEvent :: Event -> Play -> IO Play
 playEvent (EventKey (SpecialKey KeyEsc) Down _ _) _ = exitSuccess
 playEvent (EventKey (SpecialKey KeySpace) Down _ _) (Paused, ses, i, cf) = return (Resumed, ses, i, cf)
 playEvent (EventKey (SpecialKey KeySpace) Down _ _) (Resumed, ses, i, cf) = return (Paused, ses, i, cf)
-playEvent (EventKey (SpecialKey KeyLeft) Down _ _) (p, ses, i, cf) = return (p, ses, max (fst $ bounds ses) (i-20), cf)
-playEvent (EventKey (SpecialKey KeyRight) Down _ _) (p, ses, i, cf) = return (p, ses, min (snd $ bounds ses) (i+20), cf)
+playEvent (EventKey (SpecialKey KeyLeft) Down _ _) (p, ses, i, cf) = return (p, ses, max (fst $ bounds ses) (i-50), cf)
+playEvent (EventKey (SpecialKey KeyRight) Down _ _) (p, ses, i, cf) = return (p, ses, min (snd $ bounds ses) (i+50), cf)
 playEvent _ p = return p
 
 playStep :: Float -> Play -> IO Play
@@ -125,9 +124,6 @@ playStep t (Resumed, ses, i, cf) = let n = (Resumed, ses, (i+1), cf)
                                          Speech _ -> playStep t n
                                          _ -> return n
 playStep _ p = return p
-
-hasName :: Character -> Bool
-hasName = any isLower . takeWhile (/= '.')
 
 replicateChanges :: Int -> [StageEvent] -> [StageEvent]
 replicateChanges i [] = []
