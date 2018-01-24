@@ -134,7 +134,7 @@ replicateChanges i (se:ses) = let r = replicateChanges i ses
                                     _ -> se : r
 
 animation :: FilePath -> Int -> Bool -> Line -> IO ()
-animation f lps wu sl = let dis = FullScreen (1280, 800)
+animation f lps wu sl = let dis = FullScreen
                             bg = greyN 0.05
                             scf = if wu then hasName else const True
                             np = newPlay sl . replicateChanges 10 . selectCharacters scf . parse
