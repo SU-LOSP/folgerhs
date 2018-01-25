@@ -11,6 +11,7 @@ import Data.Maybe (fromMaybe)
 import Graphics.Gloss as G
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Interface.IO.Game
+import Graphics.Gloss.Interface.Environment
 
 import Folgerhs.Stage as S
 import Folgerhs.Parse (parse)
@@ -104,11 +105,12 @@ clock p = let d = translate (-60) (-10) $ scale 0.3 0.3 $ color white $ text $ c
            in pictures [d, a]
 
 
-playPic :: Play -> IO Picture
-playPic p = let pics = charPics p
-                (d, a) = optPos 200 175 (length pics)
-                posPics = [ transArc d (i*a) pic | (i, pic) <- zip [0..] pics ]
-             in return $ pictures $ clock p : posPics
+playPic :: (Int, Int) -> Play -> IO Picture
+playPic (w, h) p = let (d, a) = optPos 200 175 $ length $ charPics p
+                       pics = clock p : [ transArc d (i*a) pic | (i, pic) <- zip [0..] (charPics p) ]
+                    in return $ scale ratio ratio $ pictures pics
+                   where
+                       ratio = fromIntegral (min w h) / 800
 
 playEvent :: Event -> Play -> IO Play
 playEvent (EventKey (SpecialKey KeyEsc) Down _ _) _ = exitSuccess
@@ -138,5 +140,6 @@ animation f lps wu sl = let dis = FullScreen
                             bg = greyN 0.05
                             scf = if wu then hasName else const True
                             np = newPlay sl . replicateChanges 10 . selectCharacters scf . parse
-                         in do source <- readFile f
-                               playIO dis bg lps (np source) playPic playEvent playStep
+                         in do res <- getScreenSize
+                               source <- readFile f
+                               playIO dis bg lps (np source) (playPic res) playEvent playStep
